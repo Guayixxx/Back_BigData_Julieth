@@ -1,9 +1,9 @@
-name: Deploy Flask App to EC2
+name: Deploy Flask App
 
 on:
   push:
     branches:
-      - main
+      - main  # Cambia esto por la rama que utilizas para despliegues
 
 jobs:
   deploy:
@@ -20,41 +20,22 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Deploy to EC2
-        env:
-          HOST: ${{ secrets.EC2_HOST }}
-          USER: ${{ secrets.EC2_USER }}
-          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      - name: Stop process using port 5000
         run: |
-          echo "$SSH_KEY" > ec2_key.pem
-          chmod 600 ec2_key.pem
+          sudo lsof -ti:5000 | xargs sudo kill -9 || echo "No process found on port 5000"
 
-          # Copiar archivos a la instancia EC2
-          scp -i ec2_key.pem -o StrictHostKeyChecking=no app.py requirements.txt $USER@$HOST:/home/$USER/
-
-          # Conectar por SSH y configurar la aplicación
-          ssh -i ec2_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
-            # Instalación y configuración en la instancia EC2
-            sudo apt-get update
-            sudo apt-get install -y python3-pip python3-venv
-
-            # Crear y activar un entorno virtual
-            python3 -m venv venv
-            source venv/bin/activate
-
-            # Instalar dependencias
-            pip install -r requirements.txt
-
-            # Ejecutar la aplicación Flask
-            nohup python3 app.py > app.log 2>&1 &
-
-            # Guardar la IP pública en un archivo para referencia
-            echo $HOST > /home/$USER/ip_address.txt
+      - name: Deploy Flask app
+        run: |
+          ssh -i "${{ secrets.EC2_SSH_KEY }}" ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          cd /path/to/your/app
+          # Detén cualquier aplicación Flask en ejecución, si es necesario
+          pkill -f 'flask run' || echo "No Flask process found"
+          # Navega al directorio de tu proyecto y despliega la nueva versión
+          git pull origin main
+          nohup python3 app.py > output.log 2>&1 &
           EOF
 
-          # Leer el archivo con la IP pública de la instancia EC2
-          IP_ADDRESS=$(ssh -i ec2_key.pem -o StrictHostKeyChecking=no $USER@$HOST 'cat /home/$USER/ip_address.txt')
-          echo "La aplicación Flask está desplegada en la IP: $IP_ADDRESS"
+      - name: Notify deployment
+        run: echo "Deployment completed!"
