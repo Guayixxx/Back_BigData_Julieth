@@ -52,6 +52,12 @@ def register_user():
         return jsonify({"message": "Usuario registrado exitosamente"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+# Ruta para "Hola Mundo"
+@app.route('/hello', methods=['GET'])
+def hello_world():
+    return jsonify({"message": "Hola Mundo"}), 200
 
 # Inicia la aplicación Flask
 if __name__ == '__main__':
