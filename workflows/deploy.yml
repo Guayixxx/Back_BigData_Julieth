@@ -1,0 +1,60 @@
+name: Deploy Flask App to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Deploy to EC2
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > ec2_key.pem
+          chmod 600 ec2_key.pem
+
+          # Copiar archivos a la instancia EC2
+          scp -i ec2_key.pem -o StrictHostKeyChecking=no app.py requirements.txt $USER@$HOST:/home/$USER/
+
+          # Conectar por SSH y configurar la aplicación
+          ssh -i ec2_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            # Instalación y configuración en la instancia EC2
+            sudo apt-get update
+            sudo apt-get install -y python3-pip python3-venv
+
+            # Crear y activar un entorno virtual
+            python3 -m venv venv
+            source venv/bin/activate
+
+            # Instalar dependencias
+            pip install -r requirements.txt
+
+            # Ejecutar la aplicación Flask
+            nohup python3 app.py > app.log 2>&1 &
+
+            # Guardar la IP pública en un archivo para referencia
+            echo $HOST > /home/$USER/ip_address.txt
+          EOF
+
+          # Leer el archivo con la IP pública de la instancia EC2
+          IP_ADDRESS=$(ssh -i ec2_key.pem -o StrictHostKeyChecking=no $USER@$HOST 'cat /home/$USER/ip_address.txt')
+          echo "La aplicación Flask está desplegada en la IP: $IP_ADDRESS"
