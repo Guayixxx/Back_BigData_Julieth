@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # Configura la conexión a la base de datos MySQL en tu instancia EC2
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_user:xxxxxxxx@54.159.197.70:3306/flask_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_user:xxxxxxxx@3.83.88.240:3306/flask_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializa la base de datos
