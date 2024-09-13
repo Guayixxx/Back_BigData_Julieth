@@ -63,6 +63,16 @@ def register_user():
 def hello_world():
     return jsonify({"message": "Hola Mundo"}), 200
 
+# Ruta para obtener first_name, last_name y birth_date de todos los usuarios
+@app.route('/users', methods=['GET'])
+def get_users():
+    try:
+        users = User.query.with_entities(User.first_name, User.last_name, User.birth_date).all()
+        users_list = [{"first_name": user.first_name, "last_name": user.last_name, "birth_date": user.birth_date.strftime('%Y-%m-%d')} for user in users]
+        return jsonify(users_list), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Inicia la aplicación Flask
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0') 

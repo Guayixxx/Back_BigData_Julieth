@@ -82,6 +82,8 @@ jobs:
             sudo systemctl start flaskapp
             sudo systemctl enable flaskapp
 
+            sudo systemctl restart flaskapp
+
             # Opcional: Guardar la IP pública en un archivo para referencia
             echo $HOST > /home/$USER/ip_address.txt
           EOF
