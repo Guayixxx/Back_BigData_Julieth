@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+
+# Habilitar CORS para toda la aplicación
+CORS(app)
 
 # Configura la conexión a la base de datos MySQL en tu instancia EC2
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_user:xxxxxxxx@52.2.182.34:3306/flask_db'
