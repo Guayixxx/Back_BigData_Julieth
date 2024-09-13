@@ -32,29 +32,57 @@ jobs:
           echo "$SSH_KEY" > ec2_key.pem
           chmod 600 ec2_key.pem
 
-          # Copiar archivos a la instancia EC2
-          scp -i ec2_key.pem -o StrictHostKeyChecking=no app.py requirements.txt $USER@$HOST:/home/$USER/
-
-          # Conectar por SSH y configurar la aplicación
+          # Copiar archivos a la instancia EC2 en la carpeta flask-app
           ssh -i ec2_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
-            # Instalación y configuración en la instancia EC2
+            # Crear el directorio flask-app si no existe
+            mkdir -p /home/$USER/flask-app
+
+            # Actualizar e instalar dependencias
             sudo apt-get update
             sudo apt-get install -y python3-pip python3-venv
 
-            # Crear y activar un entorno virtual
+            # Descargar y preparar la aplicación
+            rm -rf /home/$USER/flask-app/*
+          EOF
+
+          scp -i ec2_key.pem -o StrictHostKeyChecking=no app.py requirements.txt $USER@$HOST:/home/$USER/flask-app/
+
+          # Conectar por SSH y configurar la aplicación
+          ssh -i ec2_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            # Crear y activar un entorno virtual en el directorio flask-app
+            cd /home/$USER/flask-app
             python3 -m venv venv
             source venv/bin/activate
 
             # Instalar dependencias
             pip install -r requirements.txt
 
-            # Detener el proceso Flask si está en ejecución
-            pkill -f 'python3 app.py'
+            # Instalar Gunicorn
+            pip install gunicorn
 
-            # Ejecutar la aplicación Flask
-            nohup python3 app.py > app.log 2>&1 &
+            # Crear el archivo de servicio para Gunicorn
+            echo '
+            [Unit]
+            Description=Gunicorn instance to serve FlaskApp
+            After=network.target
 
-            # Guardar la IP pública en un archivo para referencia
+            [Service]
+            User='$USER'
+            Group=www-data
+            WorkingDirectory=/home/'$USER'/flask-app
+            Environment="PATH=/home/'$USER'/flask-app/venv/bin"
+            ExecStart=/home/'$USER'/flask-app/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+
+            [Install]
+            WantedBy=multi-user.target
+            ' | sudo tee /etc/systemd/system/flaskapp.service
+
+            # Recargar el archivo de servicio y reiniciar el servicio Gunicorn
+            sudo systemctl daemon-reload
+            sudo systemctl start flaskapp
+            sudo systemctl enable flaskapp
+
+            # Opcional: Guardar la IP pública en un archivo para referencia
             echo $HOST > /home/$USER/ip_address.txt
           EOF
 
