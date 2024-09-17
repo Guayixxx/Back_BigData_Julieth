@@ -23,11 +23,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run Tests
+        run: |
+          pytest --maxfail=1 --disable-warnings -q
+
       - name: Deploy to EC2
         env:
           HOST: ${{ secrets.EC2_HOST }}
           USER: ${{ secrets.EC2_USER }}
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
         run: |
           echo "$SSH_KEY" > ec2_key.pem
           chmod 600 ec2_key.pem
@@ -71,6 +80,11 @@ jobs:
             Group=www-data
             WorkingDirectory=/home/'$USER'/flask-app
             Environment="PATH=/home/'$USER'/flask-app/venv/bin"
+            Environment="DB_USER=${{ secrets.DB_USER }}"
+            Environment="DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+            Environment="DB_HOST=${{ secrets.DB_HOST }}"
+            Environment="DB_PORT=${{ secrets.DB_PORT }}"
+            Environment="DB_NAME=${{ secrets.DB_NAME }}"
             ExecStart=/home/'$USER'/flask-app/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
 
             [Install]

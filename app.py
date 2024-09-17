@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Configura la conexión a la base de datos MySQL en tu instancia EC2
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_user:xxxxxxxx@52.2.182.34:3306/flask_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializa la base de datos
@@ -59,7 +59,7 @@ def register_user():
     
 
 # Ruta para "Hola Mundo"
-@app.route('/hello', methods=['GET'])
+@app.route('/test', methods=['GET'])
 def hello_world():
     return jsonify({"message": "Hola Mundo"}), 200
 
